@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.clineval.cliniceval.NewAssessmentController"
+      spacing="16"
+      styleClass="assessment-page">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="New Assessment" styleClass="page-title"/>
+
+    <GridPane hgap="12" vgap="12">
+        <columnConstraints>
+            <ColumnConstraints prefWidth="120"/>
+            <ColumnConstraints prefWidth="280"/>
+            <ColumnConstraints prefWidth="120"/>
+            <ColumnConstraints prefWidth="180"/>
+        </columnConstraints>
+
+        <Label text="Clinic Name:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+        <TextField fx:id="clinicNameField"
+                   promptText="Enter clinic name"
+                   prefWidth="260"
+                   GridPane.rowIndex="0"
+                   GridPane.columnIndex="1"/>
+
+        <Label text="Date:" GridPane.rowIndex="0" GridPane.columnIndex="2" styleClass="form-label"/>
+        <DatePicker fx:id="assessmentDatePicker"
+                    prefWidth="160"
+                    GridPane.rowIndex="0"
+                    GridPane.columnIndex="3"/>
+    </GridPane>
+
+    <Separator/>
+
+    <ScrollPane fitToWidth="true" pannable="true" VBox.vgrow="ALWAYS" styleClass="assessment-scroll">
+        <content>
+            <VBox spacing="14" styleClass="assessment-content">
+                <children>
+
+                    <GridPane hgap="16" vgap="10" styleClass="assessment-grid">
+                        <columnConstraints>
+                            <ColumnConstraints prefWidth="420" hgrow="ALWAYS"/>
+                            <ColumnConstraints prefWidth="80"/>
+                            <ColumnConstraints prefWidth="80"/>
+                            <ColumnConstraints prefWidth="80"/>
+                        </columnConstraints>
+
+                        <Label text="Question" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="table-header"/>
+                        <Label text="Yes" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="table-header"/>
+                        <Label text="No" GridPane.rowIndex="0" GridPane.columnIndex="2" styleClass="table-header"/>
+                        <Label text="N/A" GridPane.rowIndex="0" GridPane.columnIndex="3" styleClass="table-header"/>
+
+                        <Label text="Question 1" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q1Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="1" GridPane.columnIndex="2" toggleGroup="$q1Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="1" GridPane.columnIndex="3" toggleGroup="$q1Group"/>
+
+                        <Label text="Question 2" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="2" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q2Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="2" GridPane.columnIndex="2" toggleGroup="$q2Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="2" GridPane.columnIndex="3" toggleGroup="$q2Group"/>
+
+                        <Label text="Question 3" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="3" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q3Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="3" GridPane.columnIndex="2" toggleGroup="$q3Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="3" GridPane.columnIndex="3" toggleGroup="$q3Group"/>
+
+                        <Label text="Question 4" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="4" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q4Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="4" GridPane.columnIndex="2" toggleGroup="$q4Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="4" GridPane.columnIndex="3" toggleGroup="$q4Group"/>
+
+                        <Label text="Question 5" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="5" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q5Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="5" GridPane.columnIndex="2" toggleGroup="$q5Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="5" GridPane.columnIndex="3" toggleGroup="$q5Group"/>
+
+                        <Label text="Question 6" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="6" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q6Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="6" GridPane.columnIndex="2" toggleGroup="$q6Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="6" GridPane.columnIndex="3" toggleGroup="$q6Group"/>
+
+                        <Label text="Question 7" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="7" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q7Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="7" GridPane.columnIndex="2" toggleGroup="$q7Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="7" GridPane.columnIndex="3" toggleGroup="$q7Group"/>
+
+                        <Label text="Question 8" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="8" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q8Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="8" GridPane.columnIndex="2" toggleGroup="$q8Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="8" GridPane.columnIndex="3" toggleGroup="$q8Group"/>
+
+                        <Label text="Question 9" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="9" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q9Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="9" GridPane.columnIndex="2" toggleGroup="$q9Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="9" GridPane.columnIndex="3" toggleGroup="$q9Group"/>
+
+                        <Label text="Question 10" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="10" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q10Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="10" GridPane.columnIndex="2" toggleGroup="$q10Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="10" GridPane.columnIndex="3" toggleGroup="$q10Group"/>
+
+                        <Label text="Question 11" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="11" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q11Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="11" GridPane.columnIndex="2" toggleGroup="$q11Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="11" GridPane.columnIndex="3" toggleGroup="$q11Group"/>
+
+                        <Label text="Question 12" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="12" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q12Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="12" GridPane.columnIndex="2" toggleGroup="$q12Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="12" GridPane.columnIndex="3" toggleGroup="$q12Group"/>
+
+                        <Label text="Question 13" GridPane.rowIndex="13" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="13" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q13Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="13" GridPane.columnIndex="2" toggleGroup="$q13Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="13" GridPane.columnIndex="3" toggleGroup="$q13Group"/>
+
+                        <Label text="Question 14" GridPane.rowIndex="14" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="14" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q14Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="14" GridPane.columnIndex="2" toggleGroup="$q14Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="14" GridPane.columnIndex="3" toggleGroup="$q14Group"/>
+
+                        <Label text="Question 15" GridPane.rowIndex="15" GridPane.columnIndex="0" styleClass="question-label"/>
+                        <RadioButton text="Yes" GridPane.rowIndex="15" GridPane.columnIndex="1">
+                            <toggleGroup><ToggleGroup fx:id="q15Group"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton text="No" GridPane.rowIndex="15" GridPane.columnIndex="2" toggleGroup="$q15Group"/>
+                        <RadioButton text="N/A" GridPane.rowIndex="15" GridPane.columnIndex="3" toggleGroup="$q15Group"/>
+                    </GridPane>
+
+                    <VBox spacing="8">
+                        <Label text="Notes" styleClass="form-label"/>
+                        <TextArea fx:id="notesArea"
+                                  promptText="Enter notes for this assessment"
+                                  prefRowCount="5"
+                                  wrapText="true"/>
+                    </VBox>
+
+                    <HBox spacing="12" alignment="CENTER_RIGHT">
+                        <Button text="Save Assessment" styleClass="primary-button" onAction="#saveAssessment"/>
+                    </HBox>
+
+                </children>
+            </VBox>
+        </content>
+    </ScrollPane>
+</VBox>

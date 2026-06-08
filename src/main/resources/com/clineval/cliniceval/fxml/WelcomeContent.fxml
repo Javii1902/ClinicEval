@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      spacing="16">
+
+    <padding>
+        <Insets top="24" right="24" bottom="24" left="24"/>
+    </padding>
+
+    <Label text="Welcome" styleClass="page-title"/>
+
+    <VBox spacing="12" styleClass="card">
+        <Label text="Clinic Evaluation App" styleClass="card-title"/>
+        <Label text="Use the navigation on the left to create a new assessment, load clinic data, and review compliance results."
+               styleClass="body-text"
+               wrapText="true"/>
+    </VBox>
+</VBox>

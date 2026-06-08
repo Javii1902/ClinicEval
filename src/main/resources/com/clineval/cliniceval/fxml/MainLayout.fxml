@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.clineval.cliniceval.MainLayoutController"
+            fx:id="rootPane"
+            styleClass="root-pane">
+
+    <top>
+        <HBox spacing="12" styleClass="top-bar">
+            <padding>
+                <Insets top="16" right="20" bottom="16" left="20"/>
+            </padding>
+            <Label text="Clinic Evaluation" styleClass="app-title"/>
+            <Label text="Desktop App" styleClass="top-badge"/>
+        </HBox>
+    </top>
+
+    <left>
+        <VBox spacing="12" prefWidth="220" styleClass="side-bar">
+            <padding>
+                <Insets top="20" right="16" bottom="20" left="16"/>
+            </padding>
+
+            <Label text="Navigation" styleClass="side-heading"/>
+
+            <Button text="Home"
+                    styleClass="nav-button"
+                    maxWidth="1.7976931348623157E308"
+                    onAction="#showHome"/>
+
+            <Button text="New Assessment"
+                    styleClass="nav-button"
+                    maxWidth="1.7976931348623157E308"
+                    onAction="#showNewAssessment"/>
+
+            <Button text="Clinics"
+                    styleClass="nav-button"
+                    maxWidth="1.7976931348623157E308"
+                    onAction="#showClinics"/>
+
+            <Button text="Dashboard"
+                    styleClass="nav-button"
+                    maxWidth="1.7976931348623157E308"/>
+        </VBox>
+    </left>
+
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-area"/>
+    </center>
+
+</BorderPane>

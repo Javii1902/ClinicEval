@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.clineval.cliniceval.ClinicPageController"
+      spacing="16"
+      styleClass="assessment-page">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Clinics" styleClass="page-title"/>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Clinic Name:" styleClass="form-label"/>
+        <ComboBox fx:id="clinicComboBox" promptText="Select or type clinic name" prefWidth="320"/>
+        <Button text="Load Clinic" styleClass="primary-button" onAction="#loadClinic"/>
+    </HBox>
+
+    <GridPane hgap="20" vgap="10">
+        <columnConstraints>
+            <ColumnConstraints prefWidth="120"/>
+            <ColumnConstraints prefWidth="260"/>
+            <ColumnConstraints prefWidth="140"/>
+            <ColumnConstraints prefWidth="180"/>
+        </columnConstraints>
+
+        <Label text="Clinic:" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <Label fx:id="loadedClinicLabel" text="-" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Latest Date:" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+        <Label fx:id="assessmentDateLabel" text="-" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+    </GridPane>
+
+    <TableView fx:id="clinicTable" VBox.vgrow="ALWAYS" editable="true">
+        <columns>
+            <TableColumn fx:id="questionColumn" text="Question" prefWidth="320"/>
+            <TableColumn fx:id="answerColumn" text="Selected Radio Button" prefWidth="520"/>
+        </columns>
+    </TableView>
+
+    <VBox spacing="8">
+        <Label text="Notes" styleClass="form-label"/>
+        <TextArea fx:id="notesArea" prefRowCount="5" wrapText="true" editable="false"/>
+    </VBox>
+
+    <HBox alignment="CENTER_LEFT">
+        <Label fx:id="complianceLabel" text="Compliance: -" styleClass="compliance-label"/>
+    </HBox>
+</VBox>

@@ -5,8 +5,8 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -49,7 +49,8 @@
 
             <Button text="Dashboard"
                     styleClass="nav-button"
-                    maxWidth="1.7976931348623157E308"/>
+                    maxWidth="1.7976931348623157E308"
+                    onAction="#showDashboard"/>
         </VBox>
     </left>
 

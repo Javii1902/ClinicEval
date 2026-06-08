@@ -34,6 +34,11 @@ public class MainLayoutController {
         loadCenterView("/com/clineval/cliniceval/fxml/ClinicPage.fxml");
     }
 
+    @FXML
+    private void showDashboard() {
+        loadCenterView("/com/clineval/cliniceval/fxml/DashboardPage.fxml");
+    }
+
     private void loadCenterView(String fxmlPath) {
         try {
             URL resource = App.class.getResource(fxmlPath);
@@ -45,7 +50,6 @@ public class MainLayoutController {
 
             FXMLLoader loader = new FXMLLoader(resource);
             Node view = loader.load();
-
             contentArea.getChildren().setAll(view);
 
         } catch (IOException e) {

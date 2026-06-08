@@ -1,101 +1,228 @@
 package com.clineval.cliniceval;
 
 import com.clineval.cliniceval.config.DbManager;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Toggle;
+import javafx.scene.control.*;
 import javafx.scene.control.ToggleGroup;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class NewAssessmentController {
 
     @FXML
-    private TextField clinicNameField;
+    private ComboBox<String> clinicComboBox;
 
     @FXML
     private DatePicker assessmentDatePicker;
 
     @FXML
-    private TextArea notesArea;
+    private RadioButton q1YesRadio;
+    @FXML
+    private RadioButton q1NoRadio;
+    @FXML
+    private RadioButton q1NaRadio;
+    @FXML
+    private TextArea q1CommentArea;
 
     @FXML
+    private RadioButton q2YesRadio;
+    @FXML
+    private RadioButton q2NoRadio;
+    @FXML
+    private RadioButton q2NaRadio;
+    @FXML
+    private TextArea q2CommentArea;
+
+    @FXML
+    private RadioButton q3YesRadio;
+    @FXML
+    private RadioButton q3NoRadio;
+    @FXML
+    private RadioButton q3NaRadio;
+    @FXML
+    private TextArea q3CommentArea;
+
+    @FXML
+    private RadioButton q4YesRadio;
+    @FXML
+    private RadioButton q4NoRadio;
+    @FXML
+    private RadioButton q4NaRadio;
+    @FXML
+    private TextArea q4CommentArea;
+
+    @FXML
+    private RadioButton q5YesRadio;
+    @FXML
+    private RadioButton q5NoRadio;
+    @FXML
+    private RadioButton q5NaRadio;
+    @FXML
+    private TextArea q5CommentArea;
+
+    @FXML
+    private RadioButton q6YesRadio;
+    @FXML
+    private RadioButton q6NoRadio;
+    @FXML
+    private RadioButton q6NaRadio;
+    @FXML
+    private TextArea q6CommentArea;
+
+    @FXML
+    private RadioButton q7YesRadio;
+    @FXML
+    private RadioButton q7NoRadio;
+    @FXML
+    private RadioButton q7NaRadio;
+    @FXML
+    private TextArea q7CommentArea;
+
+    @FXML
+    private RadioButton q8YesRadio;
+    @FXML
+    private RadioButton q8NoRadio;
+    @FXML
+    private RadioButton q8NaRadio;
+    @FXML
+    private TextArea q8CommentArea;
+
+    @FXML
+    private RadioButton q9YesRadio;
+    @FXML
+    private RadioButton q9NoRadio;
+    @FXML
+    private RadioButton q9NaRadio;
+    @FXML
+    private TextArea q9CommentArea;
+
+    @FXML
+    private RadioButton q10YesRadio;
+    @FXML
+    private RadioButton q10NoRadio;
+    @FXML
+    private RadioButton q10NaRadio;
+    @FXML
+    private TextArea q10CommentArea;
+
+    @FXML
+    private RadioButton q11YesRadio;
+    @FXML
+    private RadioButton q11NoRadio;
+    @FXML
+    private RadioButton q11NaRadio;
+    @FXML
+    private TextArea q11CommentArea;
+
+    @FXML
+    private RadioButton q12YesRadio;
+    @FXML
+    private RadioButton q12NoRadio;
+    @FXML
+    private RadioButton q12NaRadio;
+    @FXML
+    private TextArea q12CommentArea;
+
+    @FXML
+    private RadioButton q13YesRadio;
+    @FXML
+    private RadioButton q13NoRadio;
+    @FXML
+    private RadioButton q13NaRadio;
+    @FXML
+    private TextArea q13CommentArea;
+
+    @FXML
+    private RadioButton q14YesRadio;
+    @FXML
+    private RadioButton q14NoRadio;
+    @FXML
+    private RadioButton q14NaRadio;
+    @FXML
+    private TextArea q14CommentArea;
+
+    @FXML
+    private RadioButton q15YesRadio;
+    @FXML
+    private RadioButton q15NoRadio;
+    @FXML
+    private RadioButton q15NaRadio;
+    @FXML
+    private TextArea q15CommentArea;
+
+    @FXML
+    private TextArea overallCommentsArea;
+
     private ToggleGroup q1Group;
-    @FXML
     private ToggleGroup q2Group;
-    @FXML
     private ToggleGroup q3Group;
-    @FXML
     private ToggleGroup q4Group;
-    @FXML
     private ToggleGroup q5Group;
-    @FXML
     private ToggleGroup q6Group;
-    @FXML
     private ToggleGroup q7Group;
-    @FXML
     private ToggleGroup q8Group;
-    @FXML
     private ToggleGroup q9Group;
-    @FXML
     private ToggleGroup q10Group;
-    @FXML
     private ToggleGroup q11Group;
-    @FXML
     private ToggleGroup q12Group;
-    @FXML
     private ToggleGroup q13Group;
-    @FXML
     private ToggleGroup q14Group;
-    @FXML
     private ToggleGroup q15Group;
 
     @FXML
     public void initialize() {
+        clinicComboBox.setEditable(true);
+        loadClinicNames();
+
+        q1Group = createToggleGroup(q1YesRadio, q1NoRadio, q1NaRadio);
+        q2Group = createToggleGroup(q2YesRadio, q2NoRadio, q2NaRadio);
+        q3Group = createToggleGroup(q3YesRadio, q3NoRadio, q3NaRadio);
+        q4Group = createToggleGroup(q4YesRadio, q4NoRadio, q4NaRadio);
+        q5Group = createToggleGroup(q5YesRadio, q5NoRadio, q5NaRadio);
+        q6Group = createToggleGroup(q6YesRadio, q6NoRadio, q6NaRadio);
+        q7Group = createToggleGroup(q7YesRadio, q7NoRadio, q7NaRadio);
+        q8Group = createToggleGroup(q8YesRadio, q8NoRadio, q8NaRadio);
+        q9Group = createToggleGroup(q9YesRadio, q9NoRadio, q9NaRadio);
+        q10Group = createToggleGroup(q10YesRadio, q10NoRadio, q10NaRadio);
+        q11Group = createToggleGroup(q11YesRadio, q11NoRadio, q11NaRadio);
+        q12Group = createToggleGroup(q12YesRadio, q12NoRadio, q12NaRadio);
+        q13Group = createToggleGroup(q13YesRadio, q13NoRadio, q13NaRadio);
+        q14Group = createToggleGroup(q14YesRadio, q14NoRadio, q14NaRadio);
+        q15Group = createToggleGroup(q15YesRadio, q15NoRadio, q15NaRadio);
+
         assessmentDatePicker.setValue(LocalDate.now());
+    }
+
+    private ToggleGroup createToggleGroup(RadioButton yes, RadioButton no, RadioButton na) {
+        ToggleGroup group = new ToggleGroup();
+        yes.setToggleGroup(group);
+        no.setToggleGroup(group);
+        na.setToggleGroup(group);
+        return group;
     }
 
     @FXML
     private void saveAssessment() {
-        String clinicName = clinicNameField.getText() == null ? "" : clinicNameField.getText().trim();
+        String clinicName = getSelectedClinicName();
         LocalDate assessmentDate = assessmentDatePicker.getValue();
-        String notes = notesArea.getText() == null ? "" : notesArea.getText().trim();
 
         if (clinicName.isBlank()) {
-            showError("Validation Error", "Clinic name is required.");
+            showError("Validation Error", "Please select or enter a clinic name.");
             return;
         }
 
         if (assessmentDate == null) {
-            showError("Validation Error", "Assessment date is required.");
+            showError("Validation Error", "Please select an assessment date.");
             return;
         }
 
-        String q1 = getSelectedAnswer(q1Group);
-        String q2 = getSelectedAnswer(q2Group);
-        String q3 = getSelectedAnswer(q3Group);
-        String q4 = getSelectedAnswer(q4Group);
-        String q5 = getSelectedAnswer(q5Group);
-        String q6 = getSelectedAnswer(q6Group);
-        String q7 = getSelectedAnswer(q7Group);
-        String q8 = getSelectedAnswer(q8Group);
-        String q9 = getSelectedAnswer(q9Group);
-        String q10 = getSelectedAnswer(q10Group);
-        String q11 = getSelectedAnswer(q11Group);
-        String q12 = getSelectedAnswer(q12Group);
-        String q13 = getSelectedAnswer(q13Group);
-        String q14 = getSelectedAnswer(q14Group);
-        String q15 = getSelectedAnswer(q15Group);
-
-        String sql = """
+        String insertSql = """
                 INSERT INTO assessments (
                     clinic_name,
                     assessment_date,
@@ -103,76 +230,134 @@ public class NewAssessmentController {
                     q6_answer, q7_answer, q8_answer, q9_answer, q10_answer,
                     q11_answer, q12_answer, q13_answer, q14_answer, q15_answer,
                     notes
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = DbManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(insertSql)) {
 
             stmt.setString(1, clinicName);
-            stmt.setDate(2, Date.valueOf(assessmentDate));
-            stmt.setString(3, q1);
-            stmt.setString(4, q2);
-            stmt.setString(5, q3);
-            stmt.setString(6, q4);
-            stmt.setString(7, q5);
-            stmt.setString(8, q6);
-            stmt.setString(9, q7);
-            stmt.setString(10, q8);
-            stmt.setString(11, q9);
-            stmt.setString(12, q10);
-            stmt.setString(13, q11);
-            stmt.setString(14, q12);
-            stmt.setString(15, q13);
-            stmt.setString(16, q14);
-            stmt.setString(17, q15);
-            stmt.setString(18, notes);
+            stmt.setDate(2, java.sql.Date.valueOf(assessmentDate));
+
+            stmt.setString(3, getSelectedAnswer(q1Group));
+            stmt.setString(4, getSelectedAnswer(q2Group));
+            stmt.setString(5, getSelectedAnswer(q3Group));
+            stmt.setString(6, getSelectedAnswer(q4Group));
+            stmt.setString(7, getSelectedAnswer(q5Group));
+            stmt.setString(8, getSelectedAnswer(q6Group));
+            stmt.setString(9, getSelectedAnswer(q7Group));
+            stmt.setString(10, getSelectedAnswer(q8Group));
+            stmt.setString(11, getSelectedAnswer(q9Group));
+            stmt.setString(12, getSelectedAnswer(q10Group));
+            stmt.setString(13, getSelectedAnswer(q11Group));
+            stmt.setString(14, getSelectedAnswer(q12Group));
+            stmt.setString(15, getSelectedAnswer(q13Group));
+            stmt.setString(16, getSelectedAnswer(q14Group));
+            stmt.setString(17, getSelectedAnswer(q15Group));
+            stmt.setString(18, overallCommentsArea.getText() == null ? "" : overallCommentsArea.getText().trim());
 
             stmt.executeUpdate();
 
-            showInfo("Success", "Assessment saved successfully.");
+            showInfo("Saved", "A new assessment instance was saved successfully.");
+            loadClinicNames();
             clearForm();
 
         } catch (SQLException e) {
             e.printStackTrace();
-            showError("Database Error", "Could not save assessment.");
+            showError("Database Error", "Could not save the assessment.");
         }
+    }
+
+    @FXML
+    private void clearForm() {
+        clinicComboBox.setValue(null);
+        clinicComboBox.getEditor().clear();
+        assessmentDatePicker.setValue(LocalDate.now());
+
+        clearToggleGroup(q1Group);
+        clearToggleGroup(q2Group);
+        clearToggleGroup(q3Group);
+        clearToggleGroup(q4Group);
+        clearToggleGroup(q5Group);
+        clearToggleGroup(q6Group);
+        clearToggleGroup(q7Group);
+        clearToggleGroup(q8Group);
+        clearToggleGroup(q9Group);
+        clearToggleGroup(q10Group);
+        clearToggleGroup(q11Group);
+        clearToggleGroup(q12Group);
+        clearToggleGroup(q13Group);
+        clearToggleGroup(q14Group);
+        clearToggleGroup(q15Group);
+
+        q1CommentArea.clear();
+        q2CommentArea.clear();
+        q3CommentArea.clear();
+        q4CommentArea.clear();
+        q5CommentArea.clear();
+        q6CommentArea.clear();
+        q7CommentArea.clear();
+        q8CommentArea.clear();
+        q9CommentArea.clear();
+        q10CommentArea.clear();
+        q11CommentArea.clear();
+        q12CommentArea.clear();
+        q13CommentArea.clear();
+        q14CommentArea.clear();
+        q15CommentArea.clear();
+        overallCommentsArea.clear();
+    }
+
+    private void loadClinicNames() {
+        String sql = """
+                SELECT DISTINCT clinic_name
+                FROM assessments
+                WHERE clinic_name IS NOT NULL
+                  AND TRIM(clinic_name) <> ''
+                ORDER BY clinic_name
+                """;
+
+        ObservableList<String> clinicNames = FXCollections.observableArrayList();
+
+        try (Connection conn = DbManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                clinicNames.add(rs.getString("clinic_name"));
+            }
+
+            clinicComboBox.setItems(clinicNames);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showError("Database Error", "Could not load clinic names.");
+        }
+    }
+
+    private String getSelectedClinicName() {
+        String value = clinicComboBox.getValue();
+
+        if (value == null || value.isBlank()) {
+            value = clinicComboBox.getEditor().getText();
+        }
+
+        return value == null ? "" : value.trim();
     }
 
     private String getSelectedAnswer(ToggleGroup group) {
-        if (group == null) {
+        if (group == null || group.getSelectedToggle() == null) {
             return null;
         }
 
-        Toggle selected = group.getSelectedToggle();
-        if (selected == null) {
-            return null;
-        }
-
-        return ((RadioButton) selected).getText();
+        RadioButton selected = (RadioButton) group.getSelectedToggle();
+        return selected.getText();
     }
 
-    private void clearForm() {
-        clinicNameField.clear();
-        assessmentDatePicker.setValue(LocalDate.now());
-        notesArea.clear();
-
-        q1Group.selectToggle(null);
-        q2Group.selectToggle(null);
-        q3Group.selectToggle(null);
-        q4Group.selectToggle(null);
-        q5Group.selectToggle(null);
-        q6Group.selectToggle(null);
-        q7Group.selectToggle(null);
-        q8Group.selectToggle(null);
-        q9Group.selectToggle(null);
-        q10Group.selectToggle(null);
-        q11Group.selectToggle(null);
-        q12Group.selectToggle(null);
-        q13Group.selectToggle(null);
-        q14Group.selectToggle(null);
-        q15Group.selectToggle(null);
+    private void clearToggleGroup(ToggleGroup group) {
+        if (group != null) {
+            group.selectToggle(null);
+        }
     }
 
     private void showInfo(String title, String message) {

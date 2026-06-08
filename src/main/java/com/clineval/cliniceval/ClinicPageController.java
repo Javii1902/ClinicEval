@@ -145,6 +145,70 @@ public class ClinicPageController {
         loadAssessmentById(selectedOption.getAssessmentId());
     }
 
+    @FXML
+    private void deleteLoadedAssessment() {
+        if (loadedAssessmentId == null) {
+            showError("Delete Error", "Please load an assessment before trying to delete it.");
+            return;
+        }
+
+        String clinicName = loadedClinicLabel.getText();
+        AssessmentOption currentOption = assessmentDateComboBox.getValue();
+        String selectedLabel = currentOption == null ? assessmentDateLabel.getText() : currentOption.toString();
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Delete Assessment");
+        alert.setHeaderText("Delete the loaded assessment?");
+        alert.setContentText(
+                "Clinic: " + clinicName + "\n" +
+                        "Assessment: " + selectedLabel + "\n\n" +
+                        "This action cannot be undone."
+        );
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        String deleteSql = """
+                DELETE FROM assessments
+                WHERE id = ?
+                """;
+
+        try (Connection conn = DbManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
+
+            stmt.setInt(1, loadedAssessmentId);
+            int rowsDeleted = stmt.executeUpdate();
+
+            if (rowsDeleted == 0) {
+                showError("Delete Error", "No assessment was deleted.");
+                return;
+            }
+
+            showInfo("Deleted", "Assessment deleted successfully.");
+
+            loadedAssessmentId = null;
+
+            loadAssessmentOptionsForClinic();
+            loadClinicNames();
+
+            if (!assessmentDateComboBox.getItems().isEmpty()) {
+                AssessmentOption nextOption = assessmentDateComboBox.getItems().get(0);
+                assessmentDateComboBox.setValue(nextOption);
+                loadAssessmentById(nextOption.getAssessmentId());
+            } else {
+                clearClinicView();
+                clinicComboBox.setValue(clinicName);
+                clinicComboBox.getEditor().setText(clinicName);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showError("Database Error", "Could not delete the assessment.");
+        }
+    }
+
     private void loadAssessmentOptionsForClinic() {
         String clinicName = getSelectedClinicName();
 
@@ -466,6 +530,7 @@ public class ClinicPageController {
         assessmentDateLabel.setText("-");
         notesArea.clear();
         complianceLabel.setText("Compliance: -");
+        assessmentDateComboBox.setValue(null);
     }
 
     private String valueOrBlank(String value) {

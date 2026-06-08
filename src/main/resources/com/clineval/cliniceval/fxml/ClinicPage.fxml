@@ -60,7 +60,8 @@
     </VBox>
 
     <HBox spacing="16" alignment="CENTER_LEFT">
-        <Label fx:id="complianceLabel" text="Compliance: -" styleClass="compliance-label"/>
-        <Button text="Save Changes" styleClass="primary-button" onAction="#saveChanges"/>
+        <Label fx:id="complianceLabel" text="Compliance: -" styleClass="compliance-label" />
+        <Button text="Save Changes" styleClass="primary-button" onAction="#saveChanges" />
+        <Button text="Delete Assessment" onAction="#deleteLoadedAssessment" />
     </HBox>
 </VBox>

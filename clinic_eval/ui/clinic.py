@@ -14,7 +14,7 @@ from ..db import (
     get_all_question_comment_templates,
     delete_assessment,
 )
-from ..validators import is_valid_date, normalize_choice
+from ..validators import is_valid_date, normalize_choice, parse_test_counts, format_test_counts
 from .assessment_config import (
     ASSESSMENT_ITEMS,
     TESTS_PERFORMED,
@@ -23,6 +23,7 @@ from .assessment_config import (
     REGION_OPTIONS,
 )
 from .excel_exports import export_clinic_workbook
+from .pdf_exports import export_clinic_pdf
 from .scroll_utils import bind_mousewheel_scrolling
 from .widgets import SearchableCombobox, SelectionEditPopup, QuestionTemplatePopup
 
@@ -93,6 +94,7 @@ class Clinic(ttk.Frame):
 
         ttk.Label(header_frame, text="Clinic Management", font=("Segoe UI", 14, "bold")).pack(side="left")
         ttk.Button(header_frame, text="Refresh", command=self.refresh_data).pack(side="right")
+        ttk.Button(header_frame, text="View Dashboard", command=self.view_clinic_dashboard).pack(side="right", padx=(0, 8))
 
         select_frame = ttk.LabelFrame(container, text="Select Clinic", padding=12)
         select_frame.pack(fill="x", pady=(0, 10))
@@ -148,15 +150,50 @@ class Clinic(ttk.Frame):
         tests_frame.pack(fill="x", pady=(0, 10))
 
         cols = 3
+        self.tests_display_vars = {}
         for i, test_name in enumerate(TESTS_PERFORMED):
-            var = tk.BooleanVar(value=False)
+            var = tk.StringVar(value="0")
             self.tests_vars[test_name] = var
+            display_var = tk.StringVar(value=f"{test_name} (0)")
+            self.tests_display_vars[test_name] = display_var
+
             row = i // cols
             col = i % cols
-            ttk.Checkbutton(tests_frame, text=test_name, variable=var).grid(row=row, column=col, padx=5, pady=2, sticky="w")
+
+            cell = ttk.Frame(tests_frame)
+            cell.grid(row=row, column=col, padx=5, pady=2, sticky="w")
+
+            spin = ttk.Spinbox(
+                cell,
+                from_=0,
+                to=999,
+                width=4,
+                textvariable=var,
+                validate="key",
+                validatecommand=(self.register(self.validate_machine_count), "%P"),
+            )
+            spin.pack(side="left")
+            spin.bind("<FocusOut>", lambda e, v=var: v.set(v.get().strip() or "0"))
+            ttk.Label(cell, textvariable=display_var).pack(side="left", padx=(6, 0))
+
+            var.trace_add("write", self.make_test_count_updater(test_name, var, display_var))
 
         for col in range(cols):
             tests_frame.columnconfigure(col, weight=1)
+
+        self.total_machines_var = tk.StringVar(value="Total machines: 0")
+        ttk.Label(
+            tests_frame,
+            textvariable=self.total_machines_var,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(
+            row=(len(TESTS_PERFORMED) // cols) + 1,
+            column=0,
+            columnspan=cols,
+            sticky="w",
+            padx=5,
+            pady=(8, 0),
+        )
 
         question_frame = ttk.LabelFrame(container, text="Assessment Detail", padding=12)
         question_frame.pack(fill="both", expand=True, pady=(0, 10))
@@ -219,6 +256,26 @@ class Clinic(ttk.Frame):
         button_frame.pack(fill="x")
         ttk.Button(button_frame, text="Save Assessment Changes", command=self.save_assessment_changes).pack(side="right")
         ttk.Button(button_frame, text="Export to Excel", command=self.export_selected_clinic_to_excel).pack(side="right", padx=(0, 8))
+        ttk.Button(button_frame, text="Export to PDF", command=self.export_selected_clinic_to_pdf).pack(side="right", padx=(0, 8))
+
+    def validate_machine_count(self, proposed):
+        return proposed == "" or proposed.isdigit()
+
+    def make_test_count_updater(self, test_name, count_var, display_var):
+        def _update(*_args):
+            text = count_var.get().strip()
+            count = int(text) if text.isdigit() else 0
+            display_var.set(f"{test_name} ({count})")
+            self.update_total_machines()
+        return _update
+
+    def update_total_machines(self):
+        total = 0
+        for var in self.tests_vars.values():
+            text = var.get().strip()
+            if text.isdigit():
+                total += int(text)
+        self.total_machines_var.set(f"Total machines: {total}")
 
     def on_frame_configure(self, event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -316,9 +373,9 @@ class Clinic(ttk.Frame):
         self.current_specialty_var.set(detail.get("specialty") or "—")
 
         tests_text = (detail.get("tests_performed") or "").strip()
-        selected_tests = {item.strip() for item in tests_text.split(",") if item.strip()}
+        test_counts = parse_test_counts(tests_text)
         for test_name, var in self.tests_vars.items():
-            var.set(test_name in selected_tests)
+            var.set(str(test_counts.get(test_name, 0)))
 
         for item in ASSESSMENT_ITEMS:
             number = item["number"]
@@ -586,8 +643,8 @@ class Clinic(ttk.Frame):
             messagebox.showerror("Selection Error", "Could not identify the selected assessment.")
             return
 
-        tests_selected = [name for name, var in self.tests_vars.items() if var.get()]
-        tests_performed = ", ".join(tests_selected)
+        tests_counts = {name: var.get().strip() or "0" for name, var in self.tests_vars.items()}
+        tests_performed = format_test_counts(tests_counts)
 
         answers_and_comments = []
         for index in range(len(ASSESSMENT_ITEMS)):
@@ -662,6 +719,60 @@ class Clinic(ttk.Frame):
         except Exception as e:
             messagebox.showerror("Export Error", f"Could not export clinic workbook.\n\n{e}")
 
+    def view_clinic_dashboard(self):
+        clinic_name = self.selected_clinic_var.get().strip()
+        if not clinic_name:
+            messagebox.showerror("No Clinic Selected", "Please select a clinic first.")
+            return
+
+        dashboard_tab = self.app.tabs.get("dashboard")
+        if dashboard_tab is None:
+            return
+
+        self.app.open_tab("dashboard")
+        self.after_idle(lambda: dashboard_tab.focus_clinic(clinic_name))
+
+    def export_selected_clinic_to_pdf(self):
+        clinic_name = self.selected_clinic_var.get().strip()
+        if not clinic_name:
+            messagebox.showerror("No Clinic Selected", "Please select a clinic first.")
+            return
+
+        selected_label = self.selected_assessment_var.get().strip()
+        if not selected_label:
+            messagebox.showerror("No Assessment Selected", "Please select an assessment record first.")
+            return
+
+        assessment_id = self.assessment_map.get(selected_label)
+        if not assessment_id:
+            messagebox.showerror("Selection Error", "Could not identify the selected assessment.")
+            return
+
+        selected_detail = get_assessment_detail(assessment_id)
+        if not selected_detail:
+            messagebox.showerror("No Data", "Could not load the selected assessment.")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            title="Save Clinic Export",
+            defaultextension=".pdf",
+            initialfile=f"{clinic_name}_clinic_checklist.pdf",
+            filetypes=[("PDF Document", "*.pdf")],
+        )
+        if not file_path:
+            return
+
+        try:
+            export_clinic_pdf(
+                file_path=file_path,
+                selected_detail=selected_detail,
+                assessment_items=ASSESSMENT_ITEMS,
+                clinic_name=clinic_name,
+            )
+            messagebox.showinfo("Export Complete", f"Clinic export saved successfully.\n\n{file_path}")
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Could not export clinic PDF.\n\n{e}")
+
     def clear_assessment_display(self):
         self.current_assessment_id = None
         self.current_date_var.set("—")
@@ -669,7 +780,7 @@ class Clinic(ttk.Frame):
         self.current_specialty_var.set("—")
 
         for test_name, var in self.tests_vars.items():
-            var.set(False)
+            var.set("0")
 
         for answer_var in self.answer_vars:
             answer_var.set("")

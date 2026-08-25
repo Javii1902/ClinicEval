@@ -13,7 +13,7 @@ from ..db import (
     update_assessment_specialty,
     create_assessment,
 )
-from ..validators import is_valid_date, normalize_choice
+from ..validators import is_valid_date, normalize_choice, format_test_counts
 from .assessment_config import (
     TESTS_PERFORMED,
     ANSWER_OPTIONS,
@@ -136,18 +136,45 @@ class NewAssessment(ttk.Frame):
 
         cols = 3
         for i, test_name in enumerate(TESTS_PERFORMED):
-            var = tk.BooleanVar(value=False)
+            var = tk.StringVar(value="0")
             self.tests_performed_vars[test_name] = var
             row = i // cols
             col = i % cols
-            ttk.Checkbutton(
-                tests_frame,
-                text=test_name,
-                variable=var
-            ).grid(row=row, column=col, sticky="w", padx=5, pady=2)
+
+            cell = ttk.Frame(tests_frame)
+            cell.grid(row=row, column=col, sticky="w", padx=5, pady=2)
+
+            spin = ttk.Spinbox(
+                cell,
+                from_=0,
+                to=999,
+                width=4,
+                textvariable=var,
+                validate="key",
+                validatecommand=(self.register(self.validate_machine_count), "%P"),
+            )
+            spin.pack(side="left")
+            spin.bind("<FocusOut>", lambda e, v=var: v.set(v.get().strip() or "0"))
+            ttk.Label(cell, text=test_name).pack(side="left", padx=(6, 0))
+
+            var.trace_add("write", lambda *args: self.update_total_machines())
 
         for c in range(cols):
             tests_frame.columnconfigure(c, weight=1)
+
+        self.total_machines_var = tk.StringVar(value="Total machines: 0")
+        ttk.Label(
+            tests_frame,
+            textvariable=self.total_machines_var,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(
+            row=(len(TESTS_PERFORMED) // cols) + 1,
+            column=0,
+            columnspan=cols,
+            sticky="w",
+            padx=5,
+            pady=(8, 0),
+        )
 
         questions_frame = ttk.Frame(self.page_frame, padding=(10, 0, 10, 10))
         questions_frame.pack(fill="x")
@@ -269,6 +296,17 @@ class NewAssessment(ttk.Frame):
     def set_today(self):
         self.assessment_date_var.set(date.today().isoformat())
 
+    def validate_machine_count(self, proposed):
+        return proposed == "" or proposed.isdigit()
+
+    def update_total_machines(self):
+        total = 0
+        for var in self.tests_performed_vars.values():
+            text = var.get().strip()
+            if text.isdigit():
+                total += int(text)
+        self.total_machines_var.set(f"Total machines: {total}")
+
     def load_clinic_names(self):
         self.all_clinic_names = get_clinic_names()
         if self.clinic_search:
@@ -383,8 +421,8 @@ class NewAssessment(ttk.Frame):
             messagebox.showerror("Validation Error", "Assessment date must be in YYYY-MM-DD format.")
             return
 
-        tests_selected = [name for name, var in self.tests_performed_vars.items() if var.get()]
-        tests_performed = ", ".join(tests_selected)
+        tests_counts = {name: var.get().strip() or "0" for name, var in self.tests_performed_vars.items()}
+        tests_performed = format_test_counts(tests_counts)
 
         answers_and_comments = []
         for index in range(len(ASSESSMENT_ITEMS)):
@@ -464,7 +502,7 @@ class NewAssessment(ttk.Frame):
             widget.delete("1.0", tk.END)
 
         for var in self.tests_performed_vars.values():
-            var.set(False)
+            var.set("0")
 
         self.overall_manual_text.delete("1.0", tk.END)
 

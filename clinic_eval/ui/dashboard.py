@@ -6,6 +6,7 @@ from openpyxl import Workbook
 from ..db import get_connection
 from .assessment_config import ASSESSMENT_ITEMS, MONTH_OPTIONS
 from ..settings import get_compliance_threshold, set_compliance_threshold
+from ..validators import parse_test_counts, classify_answer
 from .excel_exports import (
     sanitize_sheet_name,
     calculate_percentage,
@@ -14,6 +15,7 @@ from .excel_exports import (
     write_clinic_sheet,
     build_detail_from_dashboard_row,
 )
+from .pdf_exports import export_dashboard_pdf
 from .scroll_utils import bind_mousewheel_scrolling, bind_bounded_mousewheel_scrolling
 from .widgets import MultiSelectPopup, CanvasTooltip
 
@@ -156,6 +158,7 @@ class Dashboard(ttk.Frame):
 
         ttk.Label(header_frame, text="Dashboard", font=("Segoe UI", 14, "bold")).pack(side="left")
         ttk.Button(header_frame, text="Export to Excel", command=self.export_dashboard_workbook).pack(side="right", padx=(6, 0))
+        ttk.Button(header_frame, text="Export to PDF", command=self.export_dashboard_pdf).pack(side="right", padx=(6, 0))
         ttk.Button(header_frame, text="Refresh", command=self.refresh_data).pack(side="right")
 
         filter_frame = ttk.Frame(outer)
@@ -383,6 +386,24 @@ class Dashboard(ttk.Frame):
         self.clinics_filter_is_all = True
         self.regions_filter_is_all = True
         self.specialties_filter_is_all = True
+        self.load_filter_values()
+        self.refresh_filter_options()
+        self.load_dashboard()
+
+    def focus_clinic(self, clinic_name):
+        # Jumped to from the Clinic tab's "View Dashboard" button - resets
+        # every other filter (Year/Month/Region/Specialty back to "All") so
+        # the requested clinic's full history is visible, then narrows the
+        # clinic filter down to just that one clinic.
+        self.year_var.set("All")
+        self.month_var.set("All")
+        self.selected_regions = []
+        self.selected_specialties = []
+        self.regions_filter_is_all = True
+        self.specialties_filter_is_all = True
+        self.selected_clinics = [clinic_name] if clinic_name else []
+        self.clinics_filter_is_all = False
+
         self.load_filter_values()
         self.refresh_filter_options()
         self.load_dashboard()
@@ -617,8 +638,7 @@ class Dashboard(ttk.Frame):
             widget.destroy()
 
     def parse_tests_performed(self, value):
-        parts = [part.strip() for part in (value or "").split(",")]
-        return [part for part in parts if part]
+        return parse_test_counts(value)
 
     def update_sort_indicators(self):
         for col, label in self.CLINIC_HEADER_LABELS.items():
@@ -814,6 +834,7 @@ class Dashboard(ttk.Frame):
         non_compliant_clinics = 0
         clinic_rows = []
         test_counts = {}
+        test_clinic_counts = {}
         question_stats = [{"yes": 0, "no": 0, "stl": 0, "na": 0} for _ in ASSESSMENT_ITEMS]
 
         for row in rows:
@@ -821,20 +842,21 @@ class Dashboard(ttk.Frame):
 
             for idx, _item in enumerate(ASSESSMENT_ITEMS):
                 answer = (row[7 + (idx * 3)] or "").strip()
+                classification = classify_answer(answer)
 
-                if answer == "Yes":
+                if classification == "yes":
                     yes_count += 1
                     overall_yes += 1
                     question_stats[idx]["yes"] += 1
-                elif answer == "No":
+                elif classification == "no":
                     no_count += 1
                     overall_no += 1
                     question_stats[idx]["no"] += 1
-                elif answer == "STL":
+                elif classification == "stl":
                     stl_count += 1
                     overall_stl += 1
                     question_stats[idx]["stl"] += 1
-                elif answer in ("NA", "N/A"):
+                else:
                     na_count += 1
                     overall_na += 1
                     question_stats[idx]["na"] += 1
@@ -862,8 +884,13 @@ class Dashboard(ttk.Frame):
                 row,
             ))
 
-            for test_name in self.parse_tests_performed(row[5] or ""):
-                test_counts[test_name] = test_counts.get(test_name, 0) + 1
+            clinic_name = row[1] or ""
+            for test_name, count in self.parse_tests_performed(row[5] or "").items():
+                test_counts[test_name] = test_counts.get(test_name, 0) + count
+                # get_filtered_rows() already dedups to one (latest) row per
+                # clinic, so each clinic contributes at most once per test -
+                # a plain assignment, not an accumulation, is correct here.
+                test_clinic_counts.setdefault(test_name, {})[clinic_name] = count
 
         clinic_rows.sort(key=lambda x: (x[0] or "").strip().lower())
 
@@ -878,6 +905,7 @@ class Dashboard(ttk.Frame):
             "compliant_clinics": compliant_clinics,
             "non_compliant_clinics": non_compliant_clinics,
             "test_counts": test_counts,
+            "test_clinic_counts": test_clinic_counts,
             "question_stats": question_stats,
         }
 
@@ -1219,13 +1247,23 @@ class Dashboard(ttk.Frame):
                 fill="black",
             )
 
+            clinic_breakdown = dataset.get("test_clinic_counts", {}).get(test_name, {})
+            sorted_breakdown = sorted(
+                clinic_breakdown.items(),
+                key=lambda item: (-item[1], item[0].lower()),
+            )
+            tooltip_lines = [test_name, f"Total machines: {value}", ""]
+            tooltip_lines.extend(
+                f"  {clinic_name}: {clinic_count}" for clinic_name, clinic_count in sorted_breakdown
+            )
+
             # Hover region spans the full row (not just the bar) so it's easy
             # to trigger the tooltip even when the bar itself is short.
             bar_regions.append({
                 "type": "rect",
                 "bbox": (chart_start_x, y0, width - right_pad, y1),
                 "id": index,
-                "lines": [test_name, f"Clinics: {value}"],
+                "lines": tooltip_lines,
             })
 
         self.bar_chart_tooltip.set_regions(bar_regions)
@@ -1484,5 +1522,38 @@ class Dashboard(ttk.Frame):
 
         except Exception as e:
             messagebox.showerror("Export Error", f"Could not export dashboard workbook.\n\n{e}")
+
+    def export_dashboard_pdf(self):
+        try:
+            dataset = self.build_dashboard_dataset()
+            if not dataset["rows"]:
+                messagebox.showwarning("No Data", "There is no filtered dashboard data to export.")
+                return
+
+            file_path = filedialog.asksaveasfilename(
+                title="Save Dashboard PDF",
+                defaultextension=".pdf",
+                filetypes=[("PDF Document", "*.pdf")],
+                initialfile="dashboard_export.pdf",
+            )
+            if not file_path:
+                return
+
+            export_dashboard_pdf(
+                file_path=file_path,
+                dataset=dataset,
+                questions=QUESTIONS,
+                year_value=self.year_var.get(),
+                month_value=self.month_var.get(),
+                selected_clinics=self.selected_clinics,
+                selected_regions=self.selected_regions,
+                selected_specialties=self.selected_specialties,
+                timeline_dataset=self.build_timeline_dataset(),
+            )
+
+            messagebox.showinfo("Export Complete", f"Dashboard PDF exported successfully.\n\n{file_path}")
+
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Could not export dashboard PDF.\n\n{e}")
 
 

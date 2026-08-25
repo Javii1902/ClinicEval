@@ -7,6 +7,8 @@ from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
 from openpyxl.utils import get_column_letter
 
+from ..validators import classify_answer
+
 DEFAULT_ROW_HEIGHT_PT = 15
 
 TEST_CHART_COLORS = [
@@ -265,9 +267,8 @@ def write_dashboard_sheet(
             for c in range(col, col + 2):
                 ws.cell(row=r, column=c).border = styles["medium_border"]
 
-    # Timeline section sits right under the KPI row, above the pie/bar
-    # charts - matching the dashboard tab's own layout (timeline first,
-    # then the bar/pie charts side by side below it).
+    # Timeline section sits right under the KPI row, above the tables and
+    # the bar/pie charts that follow them.
     charts_start_row = 8
     timeline_points = [
         p for p in (timeline_dataset or {}).get("points", []) if p.get("average") is not None
@@ -396,185 +397,10 @@ def write_dashboard_sheet(
 
         charts_start_row = detail_header_row + len(clinic_names) + 2
 
-    # Pie backing data lives off to the side with the bar chart's helper
-    # columns (unhidden, out of the normal viewing area) so the pie chart
-    # can start right under the timeline section instead of after its own
-    # table - this lines it up with the bar chart, matching the dashboard
-    # tab's side-by-side charts layout.
-    status_col = 32
-    status_count_col = 33
-    ws.cell(row=charts_start_row, column=status_col, value="Status")
-    ws.cell(row=charts_start_row, column=status_count_col, value="Count")
-    ws.cell(row=charts_start_row + 1, column=status_col, value="Compliant")
-    ws.cell(row=charts_start_row + 1, column=status_count_col, value=dataset["compliant_clinics"])
-    ws.cell(row=charts_start_row + 2, column=status_col, value="Non-Compliant")
-    ws.cell(row=charts_start_row + 2, column=status_count_col, value=dataset["non_compliant_clinics"])
-
-    pie = PieChart()
-    pie.title = "Clinic Compliance Status"
-    pie.height = 7.8
-    pie.width = 6.6
-    pie.legend.position = "r"
-    pie.legend.overlay = False
-    pie.varyColors = False
-
-    pie_labels = Reference(ws, min_col=status_col, min_row=charts_start_row + 1, max_row=charts_start_row + 2)
-    pie_data = Reference(ws, min_col=status_count_col, min_row=charts_start_row, max_row=charts_start_row + 2)
-    pie.add_data(pie_data, titles_from_data=True)
-    pie.set_categories(pie_labels)
-
-    pie.dLbls = DataLabelList()
-    pie.dLbls.showVal = True
-    pie.dLbls.showPercent = False
-    pie.dLbls.showLegendKey = False
-    pie.dLbls.showCatName = False
-
-    if len(pie.series) > 0:
-        series = pie.series[0]
-        series.data_points = [DataPoint(idx=0), DataPoint(idx=1)]
-        series.data_points[0].graphicalProperties.solidFill = "4F81BD"
-        series.data_points[0].graphicalProperties.line.solidFill = "4F81BD"
-        series.data_points[1].graphicalProperties.solidFill = "C0504D"
-        series.data_points[1].graphicalProperties.line.solidFill = "C0504D"
-
-    # Anchored at the same row as the bar chart (right under the timeline
-    # section, or the KPI cards if there's no timeline data) so the two
-    # charts sit side by side like the dashboard tab.
-    ws.add_chart(pie, f"H{charts_start_row}")
-
-    # Compact numeric backing table for the bar chart (index/count only -
-    # test names live in the legend below the chart, matching the app's own
-    # dashboard tab: numbered bars on top, a color-keyed legend underneath).
-    # It's placed off in unused columns, out of the normal viewing area, but
-    # deliberately left *unhidden* - marking these columns hidden and relying
-    # on plotVisOnly=False previously produced a blank chart in Excel Online.
-    test_start_row = charts_start_row
-    data_col = 30
-    count_col = 31
-    ws.cell(row=test_start_row, column=data_col, value="#")
-    ws.cell(row=test_start_row, column=count_col, value="Count")
-
-    sorted_tests = sorted(
-        dataset["test_counts"].items(),
-        key=lambda item: (-item[1], item[0].lower()),
-    )
-    for idx, (test_name, count) in enumerate(sorted_tests, start=1):
-        row = test_start_row + idx
-        index_cell = ws.cell(row=row, column=data_col, value=idx)
-        count_cell = ws.cell(row=row, column=count_col, value=count)
-        index_cell.alignment = Alignment(horizontal="center", vertical="center")
-        count_cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    if sorted_tests:
-        bar = BarChart()
-        bar.type = "bar"
-        bar.style = 2
-        bar.title = "Tests Performed Across Clinics"
-        bar.y_axis.title = "Count"
-        # The color legend below the chart already identifies each bar, so
-        # the "#" category axis (and its numbers running down the chart) is
-        # redundant - drop it entirely. Also correct the value axis position
-        # (openpyxl defaults both axes to the same side, which Excel renders
-        # as a stray extra "Count" bar at the bottom of the chart).
-        bar.x_axis.delete = True
-        bar.y_axis.axPos = "b"
-        bar.height = max(10, min(18, len(sorted_tests) * 0.55))
-        bar.width = 17
-        bar.gapWidth = 50
-        bar.overlap = 0
-        bar.legend = None
-
-        # Single series driven directly by the visible index/count table -
-        # a plain category/value bar chart renders reliably everywhere,
-        # unlike the previous one-series-per-test construction, which
-        # produced a blank chart in Excel Online.
-        bar_data = Reference(
-            ws,
-            min_col=count_col,
-            min_row=test_start_row,
-            max_row=test_start_row + len(sorted_tests),
-        )
-        bar_cats = Reference(
-            ws,
-            min_col=data_col,
-            min_row=test_start_row + 1,
-            max_row=test_start_row + len(sorted_tests),
-        )
-        bar.add_data(bar_data, titles_from_data=True)
-        bar.set_categories(bar_cats)
-
-        if len(bar.series) > 0:
-            series = bar.series[0]
-            series.data_points = [DataPoint(idx=i) for i in range(len(sorted_tests))]
-            for i, data_point in enumerate(series.data_points):
-                color = TEST_CHART_COLORS[i % len(TEST_CHART_COLORS)]
-                data_point.graphicalProperties.solidFill = color
-                data_point.graphicalProperties.line.solidFill = color
-
-        bar.dLbls = DataLabelList()
-        bar.dLbls.showVal = True
-        bar.dLbls.showLegendKey = False
-        bar.dLbls.showCatName = False
-        bar.dLbls.showSerName = False
-
-        # Anchored right under the KPI cards, in line with the pie chart,
-        # instead of below the (now off-screen) index/count backing table -
-        # this mirrors the dashboard tab's side-by-side charts layout.
-        bar_anchor_row = test_start_row
-        ws.add_chart(bar, f"A{bar_anchor_row}")
-        chart_bottom_row = bar_anchor_row + estimate_chart_row_span(bar.height)
-
-        # Legend: a swatch + "# - Test Name (Count)" entry per test, laid
-        # out across multiple columns below the chart - mirroring the
-        # dashboard tab's own bar chart legend.
-        legend_columns = determine_legend_columns(len(sorted_tests))
-        legend_start_row = chart_bottom_row + 2
-        group_width = 3
-
-        for i, (test_name, count) in enumerate(sorted_tests):
-            col_group = i % legend_columns
-            row_offset = i // legend_columns
-            row = legend_start_row + row_offset
-            swatch_col = 1 + col_group * group_width
-            label_col_start = swatch_col + 1
-            label_col_end = swatch_col + group_width - 1
-            color = TEST_CHART_COLORS[i % len(TEST_CHART_COLORS)]
-
-            swatch_cell = ws.cell(row=row, column=swatch_col, value="")
-            swatch_cell.fill = PatternFill(
-                fill_type="solid", start_color=color, end_color=color
-            )
-            swatch_cell.border = styles["thin_border"]
-
-            ws.merge_cells(
-                start_row=row,
-                start_column=label_col_start,
-                end_row=row,
-                end_column=label_col_end,
-            )
-            label_cell = ws.cell(
-                row=row,
-                column=label_col_start,
-                value=f"{i + 1} - {test_name} ({count})",
-            )
-            label_cell.font = styles["normal_font"]
-            apply_wrapped_alignment(label_cell, horizontal="left", vertical="center")
-
-            ws.row_dimensions[row].height = max(
-                ws.row_dimensions[row].height or 0,
-                estimate_row_height([test_name], base_height=18, chars_per_line=28),
-            )
-
-        legend_row_count = math.ceil(len(sorted_tests) / legend_columns)
-        bar_bottom_row = legend_start_row + legend_row_count
-    else:
-        bar_bottom_row = test_start_row
-
-    clinic_table_row = max(
-        36,
-        test_start_row + len(sorted_tests) + 4,
-        bar_bottom_row + 2,
-    )
+    # Tables come first, both charts stacked below them afterward - matching
+    # the clinic checklist sheet's "table first, chart below" layout rather
+    # than floating charts beside the tables.
+    clinic_table_row = charts_start_row
     ws.merge_cells(
         start_row=clinic_table_row,
         start_column=1,
@@ -693,6 +519,174 @@ def write_dashboard_sheet(
         )
         current_row += 1
 
+    # Compact numeric backing table for the bar chart (index/count only -
+    # test names live in the legend below the chart, matching the app's own
+    # dashboard tab: numbered bars on top, a color-keyed legend underneath).
+    # It's placed off in unused columns, out of the normal viewing area, but
+    # deliberately left *unhidden* - marking these columns hidden and relying
+    # on plotVisOnly=False previously produced a blank chart in Excel Online.
+    test_start_row = current_row + 2
+    data_col = 30
+    count_col = 31
+    ws.cell(row=test_start_row, column=data_col, value="#")
+    ws.cell(row=test_start_row, column=count_col, value="Count")
+
+    sorted_tests = sorted(
+        dataset["test_counts"].items(),
+        key=lambda item: (-item[1], item[0].lower()),
+    )
+    for idx, (test_name, count) in enumerate(sorted_tests, start=1):
+        row = test_start_row + idx
+        index_cell = ws.cell(row=row, column=data_col, value=idx)
+        count_cell = ws.cell(row=row, column=count_col, value=count)
+        index_cell.alignment = Alignment(horizontal="center", vertical="center")
+        count_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    if sorted_tests:
+        bar = BarChart()
+        bar.type = "bar"
+        bar.style = 2
+        bar.title = "Machines by Test Across Clinics"
+        bar.y_axis.title = "Count"
+        # The color legend below the chart already identifies each bar, so
+        # the "#" category axis (and its numbers running down the chart) is
+        # redundant - drop it entirely. Also correct the value axis position
+        # (openpyxl defaults both axes to the same side, which Excel renders
+        # as a stray extra "Count" bar at the bottom of the chart).
+        bar.x_axis.delete = True
+        bar.y_axis.axPos = "b"
+        bar.height = max(10, min(18, len(sorted_tests) * 0.55))
+        bar.width = 17
+        bar.gapWidth = 50
+        bar.overlap = 0
+        bar.legend = None
+
+        # Single series driven directly by the visible index/count table -
+        # a plain category/value bar chart renders reliably everywhere,
+        # unlike the previous one-series-per-test construction, which
+        # produced a blank chart in Excel Online.
+        bar_data = Reference(
+            ws,
+            min_col=count_col,
+            min_row=test_start_row,
+            max_row=test_start_row + len(sorted_tests),
+        )
+        bar_cats = Reference(
+            ws,
+            min_col=data_col,
+            min_row=test_start_row + 1,
+            max_row=test_start_row + len(sorted_tests),
+        )
+        bar.add_data(bar_data, titles_from_data=True)
+        bar.set_categories(bar_cats)
+
+        if len(bar.series) > 0:
+            series = bar.series[0]
+            series.data_points = [DataPoint(idx=i) for i in range(len(sorted_tests))]
+            for i, data_point in enumerate(series.data_points):
+                color = TEST_CHART_COLORS[i % len(TEST_CHART_COLORS)]
+                data_point.graphicalProperties.solidFill = color
+                data_point.graphicalProperties.line.solidFill = color
+
+        bar.dLbls = DataLabelList()
+        bar.dLbls.showVal = True
+        bar.dLbls.showLegendKey = False
+        bar.dLbls.showCatName = False
+        bar.dLbls.showSerName = False
+
+        # Anchored below the tables (not beside the now off-screen index/
+        # count backing table), with the pie chart stacked beneath it.
+        bar_anchor_row = test_start_row
+        ws.add_chart(bar, f"A{bar_anchor_row}")
+        chart_bottom_row = bar_anchor_row + estimate_chart_row_span(bar.height)
+
+        # Legend: a swatch + "# - Test Name (Count)" entry per test, laid
+        # out across multiple columns below the chart - mirroring the
+        # dashboard tab's own bar chart legend.
+        legend_columns = determine_legend_columns(len(sorted_tests))
+        legend_start_row = chart_bottom_row + 2
+        group_width = 3
+
+        for i, (test_name, count) in enumerate(sorted_tests):
+            col_group = i % legend_columns
+            row_offset = i // legend_columns
+            row = legend_start_row + row_offset
+            swatch_col = 1 + col_group * group_width
+            label_col_start = swatch_col + 1
+            label_col_end = swatch_col + group_width - 1
+            color = TEST_CHART_COLORS[i % len(TEST_CHART_COLORS)]
+
+            swatch_cell = ws.cell(row=row, column=swatch_col, value="")
+            swatch_cell.fill = PatternFill(
+                fill_type="solid", start_color=color, end_color=color
+            )
+            swatch_cell.border = styles["thin_border"]
+
+            ws.merge_cells(
+                start_row=row,
+                start_column=label_col_start,
+                end_row=row,
+                end_column=label_col_end,
+            )
+            label_cell = ws.cell(
+                row=row,
+                column=label_col_start,
+                value=f"{i + 1} - {test_name} ({count})",
+            )
+            label_cell.font = styles["normal_font"]
+            apply_wrapped_alignment(label_cell, horizontal="left", vertical="center")
+
+            ws.row_dimensions[row].height = max(
+                ws.row_dimensions[row].height or 0,
+                estimate_row_height([test_name], base_height=18, chars_per_line=28),
+            )
+
+        legend_row_count = math.ceil(len(sorted_tests) / legend_columns)
+        bar_bottom_row = legend_start_row + legend_row_count
+    else:
+        bar_bottom_row = test_start_row
+
+    # Pie chart stacked below the bar chart/legend (not beside it), keeping
+    # everything in a single column so the sheet reads top-to-bottom.
+    pie_section_row = bar_bottom_row + 2
+    status_col = 32
+    status_count_col = 33
+    ws.cell(row=pie_section_row, column=status_col, value="Status")
+    ws.cell(row=pie_section_row, column=status_count_col, value="Count")
+    ws.cell(row=pie_section_row + 1, column=status_col, value="Compliant")
+    ws.cell(row=pie_section_row + 1, column=status_count_col, value=dataset["compliant_clinics"])
+    ws.cell(row=pie_section_row + 2, column=status_col, value="Non-Compliant")
+    ws.cell(row=pie_section_row + 2, column=status_count_col, value=dataset["non_compliant_clinics"])
+
+    pie = PieChart()
+    pie.title = "Clinic Compliance Status"
+    pie.height = 7.8
+    pie.width = 6.6
+    pie.legend.position = "r"
+    pie.legend.overlay = False
+    pie.varyColors = False
+
+    pie_labels = Reference(ws, min_col=status_col, min_row=pie_section_row + 1, max_row=pie_section_row + 2)
+    pie_data = Reference(ws, min_col=status_count_col, min_row=pie_section_row, max_row=pie_section_row + 2)
+    pie.add_data(pie_data, titles_from_data=True)
+    pie.set_categories(pie_labels)
+
+    pie.dLbls = DataLabelList()
+    pie.dLbls.showVal = True
+    pie.dLbls.showPercent = False
+    pie.dLbls.showLegendKey = False
+    pie.dLbls.showCatName = False
+
+    if len(pie.series) > 0:
+        series = pie.series[0]
+        series.data_points = [DataPoint(idx=0), DataPoint(idx=1)]
+        series.data_points[0].graphicalProperties.solidFill = "4F81BD"
+        series.data_points[0].graphicalProperties.line.solidFill = "4F81BD"
+        series.data_points[1].graphicalProperties.solidFill = "C0504D"
+        series.data_points[1].graphicalProperties.line.solidFill = "C0504D"
+
+    ws.add_chart(pie, f"A{pie_section_row}")
+
 
 def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
     styles = get_excel_styles()
@@ -754,7 +748,7 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
     ws.column_dimensions["N"].width = 12
     ws.column_dimensions["O"].width = 12
 
-    answer_column_map = {"Yes": 3, "No": 4, "STL": 5, "N/A": 6, "NA": 6}
+    classification_column_map = {"yes": 3, "no": 4, "stl": 5, "na": 6}
     category_no_counts = {}
     category_stl_counts = {}
     yes_count = no_count = stl_count = na_count = 0
@@ -766,6 +760,7 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
         number = item["number"]
 
         answer = (selected_detail.get(f"q{number}_answer") or "").strip()
+        classification = classify_answer(answer)
         comment_text = build_comment_text(selected_detail, number)
         custom_comment = get_custom_comment(selected_detail, number)
 
@@ -788,8 +783,7 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
             answer_cell.alignment = Alignment(horizontal="center", vertical="center")
             answer_cell.border = thin_border
 
-        if answer in answer_column_map:
-            ws.cell(row=row_num, column=answer_column_map[answer], value="x")
+        ws.cell(row=row_num, column=classification_column_map[classification], value="x")
 
         comment_cell = ws.cell(row=row_num, column=7, value=comment_text)
         comment_cell.font = normal_font
@@ -803,15 +797,15 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
         custom_comment_cell.border = thin_border
         apply_wrapped_alignment(custom_comment_cell, horizontal="left", vertical="top")
 
-        if answer == "Yes":
+        if classification == "yes":
             yes_count += 1
-        elif answer == "No":
+        elif classification == "no":
             no_count += 1
             category_no_counts[category] = category_no_counts.get(category, 0) + 1
-        elif answer == "STL":
+        elif classification == "stl":
             stl_count += 1
             category_stl_counts[category] = category_stl_counts.get(category, 0) + 1
-        elif answer in ("N/A", "NA"):
+        else:
             na_count += 1
 
         ws.row_dimensions[row_num].height = estimate_row_height(
@@ -819,18 +813,6 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
             base_height=28,
             chars_per_line=60,
             min_lines=1,
-        )
-
-    findings_header_row = 5
-    ws.cell(row=findings_header_row, column=10, value="Category").font = header_font
-    ws.cell(row=findings_header_row, column=11, value="Findings").font = header_font
-    ws.cell(row=findings_header_row, column=12, value="Stop the Line").font = header_font
-    for c in range(10, 13):
-        cell = ws.cell(row=findings_header_row, column=c)
-        cell.fill = header_fill
-        cell.border = medium_border
-        cell.alignment = Alignment(
-            horizontal="center", vertical="center", wrap_text=True
         )
 
     display_category_map = {
@@ -844,65 +826,9 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
         "OBSERVATION/INTERVIEW",
     ]
 
-    findings_data_start = findings_header_row + 1
-    for idx, category in enumerate(ordered_categories, start=0):
-        r = findings_data_start + idx
-        ws.cell(row=r, column=10, value=display_category_map.get(category, category))
-        ws.cell(row=r, column=11, value=category_no_counts.get(category, 0))
-        ws.cell(row=r, column=12, value=category_stl_counts.get(category, 0))
-        for c in range(10, 13):
-            ws.cell(row=r, column=c).border = thin_border
-            ws.cell(row=r, column=c).alignment = Alignment(
-                horizontal="center", vertical="center", wrap_text=True
-            )
-        ws.cell(row=r, column=10).alignment = Alignment(
-            horizontal="left", vertical="center", wrap_text=True
-        )
-
-    chart = BarChart()
-    chart.type = "col"
-    chart.style = 2
-    chart.title = "Point of Care Visit Results"
-    chart.width = 19.5
-    chart.height = 11.5
-    chart.gapWidth = 170
-    chart.overlap = 0
-    chart.x_axis.delete = False
-    chart.y_axis.delete = False
-    chart.x_axis.title = None
-    chart.y_axis.title = "Count"
-    chart.y_axis.scaling.min = 0
-    chart.y_axis.majorUnit = 1
-
-    data = Reference(
-        ws,
-        min_col=11,
-        max_col=12,
-        min_row=findings_header_row,
-        max_row=findings_data_start + len(ordered_categories) - 1,
-    )
-    categories = Reference(
-        ws,
-        min_col=10,
-        min_row=findings_data_start,
-        max_row=findings_data_start + len(ordered_categories) - 1,
-    )
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(categories)
-    chart.legend.position = "r"
-    chart.legend.overlay = False
-
-    if len(chart.series) > 0:
-        chart.series[0].graphicalProperties.solidFill = "ED7D31"
-        chart.series[0].graphicalProperties.line.solidFill = "ED7D31"
-    if len(chart.series) > 1:
-        chart.series[1].graphicalProperties.solidFill = "C00000"
-        chart.series[1].graphicalProperties.line.solidFill = "C00000"
-
-    ws.add_chart(chart, "J10")
-
     summary_label_row = start_row + len(assessment_items) + 1
     summary_value_row = summary_label_row + 1
+    compliance = calculate_percentage(yes_count, no_count, stl_count)
     summary_cols = {
         1: "Item:",
         2: "Out of",
@@ -910,14 +836,16 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
         4: "No",
         5: "STL",
         6: "N/A",
+        7: "Compliance %",
     }
     summary_values = {
-        1: len(assessment_items),
-        2: len(assessment_items),
+        1: yes_count,
+        2: len(assessment_items) - na_count,
         3: yes_count,
         4: no_count,
         5: stl_count,
         6: na_count,
+        7: format_percentage(compliance),
     }
 
     for col_idx, label in summary_cols.items():
@@ -968,6 +896,79 @@ def write_clinic_sheet(ws, selected_detail, assessment_items, sheet_title=None):
                 )
             else:
                 cell.alignment = Alignment(vertical="center", wrap_text=True)
+
+    # Findings table + chart sit below everything else (not beside the item
+    # table) so they read as a summary section instead of floating content
+    # off to the side of the checklist.
+    findings_header_row = max_row + 2
+    ws.cell(row=findings_header_row, column=1, value="Category").font = header_font
+    ws.cell(row=findings_header_row, column=2, value="Findings").font = header_font
+    ws.cell(row=findings_header_row, column=3, value="Stop the Line").font = header_font
+    for c in range(1, 4):
+        cell = ws.cell(row=findings_header_row, column=c)
+        cell.fill = header_fill
+        cell.border = medium_border
+        cell.alignment = Alignment(
+            horizontal="center", vertical="center", wrap_text=True
+        )
+
+    findings_data_start = findings_header_row + 1
+    for idx, category in enumerate(ordered_categories, start=0):
+        r = findings_data_start + idx
+        ws.cell(row=r, column=1, value=display_category_map.get(category, category))
+        ws.cell(row=r, column=2, value=category_no_counts.get(category, 0))
+        ws.cell(row=r, column=3, value=category_stl_counts.get(category, 0))
+        for c in range(1, 4):
+            ws.cell(row=r, column=c).border = thin_border
+            ws.cell(row=r, column=c).alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
+        ws.cell(row=r, column=1).alignment = Alignment(
+            horizontal="left", vertical="center", wrap_text=True
+        )
+
+    chart = BarChart()
+    chart.type = "col"
+    chart.style = 2
+    chart.title = "Point of Care Visit Results"
+    chart.width = 19.5
+    chart.height = 11.5
+    chart.gapWidth = 170
+    chart.overlap = 0
+    chart.x_axis.delete = False
+    chart.y_axis.delete = False
+    chart.x_axis.title = None
+    chart.y_axis.title = "Count"
+    chart.y_axis.scaling.min = 0
+    chart.y_axis.majorUnit = 1
+
+    data = Reference(
+        ws,
+        min_col=2,
+        max_col=3,
+        min_row=findings_header_row,
+        max_row=findings_data_start + len(ordered_categories) - 1,
+    )
+    categories = Reference(
+        ws,
+        min_col=1,
+        min_row=findings_data_start,
+        max_row=findings_data_start + len(ordered_categories) - 1,
+    )
+    chart.add_data(data, titles_from_data=True)
+    chart.set_categories(categories)
+    chart.legend.position = "r"
+    chart.legend.overlay = False
+
+    if len(chart.series) > 0:
+        chart.series[0].graphicalProperties.solidFill = "ED7D31"
+        chart.series[0].graphicalProperties.line.solidFill = "ED7D31"
+    if len(chart.series) > 1:
+        chart.series[1].graphicalProperties.solidFill = "C00000"
+        chart.series[1].graphicalProperties.line.solidFill = "C00000"
+
+    chart_anchor_row = findings_data_start + len(ordered_categories) + 2
+    ws.add_chart(chart, f"A{chart_anchor_row}")
 
 
 def build_detail_from_dashboard_row(source_row, assessment_items):
